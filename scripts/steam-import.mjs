@@ -24,6 +24,15 @@ function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function fileExists(filePath) {
+	try {
+		await import('node:fs/promises').then((fs) => fs.access(filePath));
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 async function fetchJson(url, init) {
 	const res = await fetch(url, init);
 	const text = await res.text();
@@ -48,6 +57,67 @@ async function fetchText(url, init) {
 	const text = await res.text();
 	if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} for ${url}: ${text.slice(0, 200)}`);
 	return text;
+}
+
+function decodeVdfString(text) {
+	// Minimal unescape for Valve KeyValues strings.
+	return text.replaceAll('\\\\', '\\').replaceAll('\\"', '"');
+}
+
+async function getInstalledGamesFromLocal(steamRoot) {
+	const fs = await import('node:fs/promises');
+	const path = await import('node:path');
+
+	const libraryFoldersCandidates = [
+		path.join(steamRoot, 'config', 'libraryfolders.vdf'),
+		path.join(steamRoot, 'steamapps', 'libraryfolders.vdf')
+	];
+
+	const libraryPaths = new Set([steamRoot]);
+
+	for (const lf of libraryFoldersCandidates) {
+		if (!(await fileExists(lf))) continue;
+		const content = await fs.readFile(lf, 'utf8');
+		const re = /"path"\s+"([^"]+)"/g;
+		for (const match of content.matchAll(re)) {
+			const raw = match[1] ?? '';
+			const decoded = decodeVdfString(raw).trim();
+			if (decoded) libraryPaths.add(decoded);
+		}
+	}
+
+	const gamesByAppId = new Map();
+
+	for (const lib of libraryPaths) {
+		const steamapps = path.join(lib, 'steamapps');
+		try {
+			const entries = await fs.readdir(steamapps, { withFileTypes: true });
+			for (const entry of entries) {
+				if (!entry.isFile()) continue;
+				const m = entry.name.match(/^appmanifest_(\d+)\.acf$/);
+				if (!m) continue;
+				const appidFromName = Number.parseInt(m[1] ?? '', 10);
+				if (!Number.isFinite(appidFromName)) continue;
+
+				const acfPath = path.join(steamapps, entry.name);
+				const acf = await fs.readFile(acfPath, 'utf8');
+
+				const appidMatch = acf.match(/"appid"\s+"(\d+)"/i);
+				const nameMatch = acf.match(/"name"\s+"([^"]+)"/i);
+
+				const appid = Number.parseInt((appidMatch?.[1] ?? String(appidFromName)).trim(), 10);
+				let name = (nameMatch?.[1] ?? '').trim();
+				name = decodeVdfString(name);
+
+				if (!Number.isFinite(appid) || !name) continue;
+				gamesByAppId.set(appid, { appid, name, playtimeForever: null });
+			}
+		} catch {
+			// Missing/unmounted library path. Ignore.
+		}
+	}
+
+	return [...gamesByAppId.values()];
 }
 
 async function waitForApp(appUrl, tries = 60) {
@@ -170,6 +240,20 @@ async function getOwnedGamesFromCommunity({ profile }) {
 		}
 	});
 
+	// Steam seems to redirect /games to login now (even for public profiles).
+	// Detect it and provide an actionable error.
+	if (
+		xml.startsWith('Found. Redirecting to /login/') ||
+		/\/login\/\?redir=/.test(xml) ||
+		/<title>\s*Steam Community\s*::\s*Sign In/i.test(xml)
+	) {
+		throw new Error(
+			'Steam Community games list requires login (redirected to /login). ' +
+				'This fallback is currently not reliable. Prefer the Web API method (STEAM_API_KEY + STEAM_ID) ' +
+				'or use the local Steam importer (STEAM_LOCAL_ROOT) for installed games.'
+		);
+	}
+
 	const games = parseCommunityGamesXml(xml);
 	if (games.length === 0) {
 		throw new Error(
@@ -216,24 +300,33 @@ async function main() {
 	const apiKey = optionalEnv('STEAM_API_KEY');
 	const steamId = optionalEnv('STEAM_ID');
 	const steamProfile = optionalEnv('STEAM_PROFILE');
+	const steamLocalRoot = optionalEnv('STEAM_LOCAL_ROOT');
 
 	console.log(`[steam-import] app: ${appUrl}`);
 	console.log(
 		`[steam-import] source: ${
-			apiKey && steamId ? 'steam-web-api' : steamProfile ? 'steam-community' : 'missing-config'
+			steamLocalRoot
+				? 'steam-local-installed'
+				: apiKey && steamId
+					? 'steam-web-api'
+					: steamProfile
+						? 'steam-community'
+						: 'missing-config'
 		}`
 	);
 
 	await waitForApp(appUrl);
 
 	const owned =
-		apiKey && steamId
+		steamLocalRoot
+			? await getInstalledGamesFromLocal(steamLocalRoot)
+			: apiKey && steamId
 			? await getOwnedGames({ apiKey, steamId })
 			: steamProfile
 				? await getOwnedGamesFromCommunity({ profile: steamProfile })
 				: (() => {
 						throw new Error(
-							'Configure either (STEAM_API_KEY + STEAM_ID) or STEAM_PROFILE. See README for details.'
+							'Configure one of: (STEAM_API_KEY + STEAM_ID) or STEAM_LOCAL_ROOT. See README for details.'
 						);
 					})();
 	console.log(`[steam-import] fetched: ${owned.length} games`);

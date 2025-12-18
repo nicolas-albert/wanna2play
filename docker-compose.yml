@@ -29,9 +29,26 @@ services:
       STEAM_API_KEY: ${STEAM_API_KEY:-}
       STEAM_ID: ${STEAM_ID:-}
       STEAM_PROFILE: ${STEAM_PROFILE:-}
+      STEAM_LOCAL_ROOT: ${STEAM_LOCAL_ROOT:-}
       IMPORT_CONCURRENCY: ${IMPORT_CONCURRENCY:-4}
     volumes:
       - ./:/work:ro
+    depends_on:
+      - app
+    profiles:
+      - tools
+
+  steam-local-import:
+    image: node:20-bookworm-slim
+    working_dir: /work
+    command: ["node", "scripts/steam-import.mjs"]
+    environment:
+      WANNA2PLAY_APP_URL: http://app:3000
+      STEAM_LOCAL_ROOT: ${STEAM_LOCAL_ROOT:?Set STEAM_LOCAL_ROOT to your Steam folder}
+      IMPORT_CONCURRENCY: ${IMPORT_CONCURRENCY:-4}
+    volumes:
+      - ./:/work:ro
+      - ${STEAM_LOCAL_ROOT:?Set STEAM_LOCAL_ROOT to your Steam folder}:${STEAM_LOCAL_ROOT}:ro
     depends_on:
       - app
     profiles:

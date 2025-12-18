@@ -41,14 +41,21 @@ Notes:
 - **Preferred (official, stable):**
   - `STEAM_API_KEY` (create one: https://steamcommunity.com/dev/apikey)
   - `STEAM_ID` (SteamID64 — you can find it on https://steamid.io/)
-- **Fallback (no Web API key):**
+- **Local Steam (no Web API key, installed games only):**
+  - `STEAM_LOCAL_ROOT` (your local Steam folder on the host)
+- **Fallback (no Web API key, may be unreliable):**
   - `STEAM_PROFILE` (SteamID64, vanity ID, or full profile URL)
-  - requires Steam privacy: your **Game details** must be **Public**
 
 2) Run the importer (one-shot container):
 
 ```bash
 docker compose --profile tools run --rm steam-import
+```
+
+If you use the local Steam mode:
+
+```bash
+docker compose --profile tools run --rm steam-local-import
 ```
 
 The importer calls the Wanna2Play API to upsert your games and (if Ollama + Qdrant are configured) automatically indexes them for semantic search.
