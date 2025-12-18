@@ -15,17 +15,23 @@
 
 html,
 body {
-	height: 100%;
+	min-height: 100%;
 }
 
-body {
-	margin: 0;
-	color: var(--text);
+html {
 	background:
 		radial-gradient(1200px 600px at 10% 10%, rgba(103, 232, 249, 0.18), transparent 60%),
 		radial-gradient(1000px 500px at 80% 0%, rgba(167, 139, 250, 0.22), transparent 60%),
 		radial-gradient(900px 450px at 70% 90%, rgba(34, 211, 238, 0.14), transparent 65%),
 		var(--bg);
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+}
+
+body {
+	margin: 0;
+	color: var(--text);
+	background: transparent;
 	font-family:
 		ui-sans-serif,
 		system-ui,
@@ -153,6 +159,8 @@ a {
 	background: var(--panel);
 	padding: 0;
 	text-align: left;
+	color: var(--text);
+	font: inherit;
 	border-radius: 16px;
 	overflow: hidden;
 	cursor: pointer;
@@ -168,6 +176,11 @@ a {
 	transform: translateY(-2px);
 	background: var(--panel-2);
 	border-color: rgba(255, 255, 255, 0.22);
+}
+
+.card:focus-visible {
+	outline: 2px solid rgba(103, 232, 249, 0.55);
+	outline-offset: 2px;
 }
 
 .cover {
