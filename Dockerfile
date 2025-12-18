@@ -15,7 +15,7 @@ WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN npm run prepare && npm run build
 RUN npm prune --omit=dev
 
 FROM node:20-bookworm-slim AS run

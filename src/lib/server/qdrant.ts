@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import { createHash } from 'node:crypto';
 
 type QdrantSearchResult = {
 	result?: Array<{
@@ -24,6 +25,21 @@ const baseUrl = (env.QDRANT_URL ?? 'http://localhost:6333').replace(/\/+$/, '');
 const collection = (env.QDRANT_COLLECTION ?? 'wanna2play_games').trim();
 
 let ensuredVectorSize: number | null = null;
+
+function gameIdToPointId(gameId: string): string {
+	// Qdrant point IDs must be an integer or a UUID.
+	// We keep our own string game IDs (e.g. "steam:123", "gog:xyz") in the payload and use a deterministic UUID
+	// derived from the game ID as the Qdrant point ID.
+	const digest = createHash('sha256').update(gameId).digest();
+	const bytes = digest.subarray(0, 16);
+
+	// Make it look like a UUIDv4 (deterministic, but valid format).
+	bytes[6] = (bytes[6] & 0x0f) | 0x40;
+	bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+	const hex = Buffer.from(bytes).toString('hex');
+	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
 
 async function qdrantRequest(path: string, init?: RequestInit): Promise<Response> {
 	return await fetch(`${baseUrl}${path}`, {
@@ -73,7 +89,7 @@ export async function upsertVector(id: string, vector: number[]): Promise<void> 
 	const res = await qdrantRequest(`/collections/${encodeURIComponent(collection)}/points?wait=true`, {
 		method: 'PUT',
 		body: JSON.stringify({
-			points: [{ id, vector, payload: { id } }]
+			points: [{ id: gameIdToPointId(id), vector, payload: { id } }]
 		})
 	});
 
@@ -104,4 +120,3 @@ export async function searchSimilar(vector: number[], limit: number): Promise<st
 		.map((hit) => String(hit.payload?.id ?? hit.id))
 		.filter((id) => id.length > 0);
 }
-
