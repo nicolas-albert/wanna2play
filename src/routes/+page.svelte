@@ -139,7 +139,14 @@
 			<button class="card" type="button" onclick={() => openDetails(game)}>
 				<div class="cover">
 					{#if game.coverUrl}
-						<img src={game.coverUrl} alt="" loading="lazy" />
+						<img
+							src={game.coverUrl}
+							alt=""
+							loading="lazy"
+							onerror={(e) => {
+								(e.currentTarget as HTMLImageElement).style.display = 'none';
+							}}
+						/>
 					{/if}
 				</div>
 				<div class="card-body">

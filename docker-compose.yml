@@ -20,6 +20,22 @@ services:
     depends_on:
       - qdrant
 
+  steam-import:
+    image: node:20-bookworm-slim
+    working_dir: /work
+    command: ["node", "scripts/steam-import.mjs"]
+    environment:
+      WANNA2PLAY_APP_URL: http://app:3000
+      STEAM_API_KEY: ${STEAM_API_KEY:-}
+      STEAM_ID: ${STEAM_ID:-}
+      IMPORT_CONCURRENCY: ${IMPORT_CONCURRENCY:-4}
+    volumes:
+      - ./:/work:ro
+    depends_on:
+      - app
+    profiles:
+      - tools
+
   qdrant:
     image: qdrant/qdrant:v1.15.4
     volumes:

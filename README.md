@@ -30,10 +30,24 @@ docker compose up --build
 - Click **“Seed demo data”** to populate a small sample library.
 
 Notes:
-- The app binds to `127.0.0.1` by default. Edit `docker-compose.yml` if you want LAN access.
+- The app is exposed on `0.0.0.0:3210` by default (LAN access). If you want localhost-only, change the port mapping in `docker-compose.yml` to `127.0.0.1:3210:3000`.
 - Qdrant is only exposed to the Docker network by default (no host port binding).
 - If `OLLAMA_BASE_URL` is not set or Ollama is unreachable, Wanna2Play falls back to keyword search (SQLite `LIKE`).
 - If you run Ollama on the host *outside* Docker, make sure the URL is reachable from inside the container (e.g. `http://host.docker.internal:11434` on some setups, or your host IP).
+
+## Import your Steam library
+
+1) Configure your Steam credentials in `.env`:
+- `STEAM_API_KEY` (create one: https://steamcommunity.com/dev/apikey)
+- `STEAM_ID` (SteamID64 — you can find it on https://steamid.io/)
+
+2) Run the importer (one-shot container):
+
+```bash
+docker compose --profile tools run --rm steam-import
+```
+
+The importer calls the Wanna2Play API to upsert your games and (if Ollama + Qdrant are configured) automatically indexes them for semantic search.
 
 ## Local development
 
