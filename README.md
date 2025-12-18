@@ -33,6 +33,7 @@ Notes:
 - The app binds to `127.0.0.1` by default. Edit `docker-compose.yml` if you want LAN access.
 - Qdrant is only exposed to the Docker network by default (no host port binding).
 - If `OLLAMA_BASE_URL` is not set or Ollama is unreachable, Wanna2Play falls back to keyword search (SQLite `LIKE`).
+- If you run Ollama on the host *outside* Docker, make sure the URL is reachable from inside the container (e.g. `http://host.docker.internal:11434` on some setups, or your host IP).
 
 ## Local development
 
