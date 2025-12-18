@@ -1,16 +1,28 @@
 <script lang="ts">
-	import type { Game, SearchResponse } from '$lib/types';
+	import { onMount } from 'svelte';
+	import type { Game, HealthResponse, SearchResponse } from '$lib/types';
 
 	let query = $state('');
 	let mode = $state<'semantic' | 'keyword'>('keyword');
 	let results = $state<Game[]>([]);
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
+	let health = $state<HealthResponse | null>(null);
 
 	let selected = $state<Game | null>(null);
 	let dialog = $state<HTMLDialogElement | null>(null);
 
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	async function loadHealth() {
+		try {
+			const res = await fetch('/api/health');
+			if (!res.ok) return;
+			health = (await res.json()) as HealthResponse;
+		} catch {
+			// ignore
+		}
+	}
 
 	async function load(q: string) {
 		isLoading = true;
@@ -44,6 +56,11 @@
 		error = null;
 		try {
 			const res = await fetch('/api/seed', { method: 'POST' });
+			if (res.status === 409) {
+				// Library already has data.
+				await load('');
+				return;
+			}
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			await load('');
 		} catch (e) {
@@ -57,6 +74,11 @@
 		selected = game;
 		dialog?.showModal();
 	}
+
+	onMount(() => {
+		void loadHealth();
+		void load('');
+	});
 </script>
 
 <div class="container">
@@ -65,7 +87,13 @@
 			<h1>Wanna2Play</h1>
 			<p>One place to browse all your game libraries.</p>
 		</div>
-		<div class="pill">{mode === 'semantic' ? 'Semantic search' : 'Keyword search'}</div>
+		<div class="pill">
+			{#if health?.ollama.reachable}
+				{mode === 'semantic' ? 'Semantic search' : 'Semantic ready'}
+			{:else}
+				Keyword search
+			{/if}
+		</div>
 	</div>
 
 	<div class="search">
@@ -88,8 +116,12 @@
 				{/if}
 			</div>
 			<div class="muted">
-				{#if mode === 'keyword'}
+				{#if health?.ollama.baseUrl && !health?.ollama.reachable}
+					Ollama is not reachable at <code>{health.ollama.baseUrl}</code>.
+				{:else if !health?.ollama.baseUrl}
 					Set <code>OLLAMA_BASE_URL</code> to enable semantic search.
+				{:else}
+					Semantic search is enabled (<code>{health.ollama.model}</code>).
 				{/if}
 			</div>
 		</div>

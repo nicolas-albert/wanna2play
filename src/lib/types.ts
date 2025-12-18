@@ -14,3 +14,9 @@ export type SearchResponse = {
 	results: Game[];
 };
 
+export type HealthResponse = {
+	ok: boolean;
+	sqlite: { path: string };
+	qdrant: { url: string; ready: boolean };
+	ollama: { baseUrl: string; model: string; reachable: boolean };
+};
