@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      SQLITE_PATH: /data/wanna2play.sqlite
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: wanna2play_games
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+    ports:
+      - "127.0.0.1:3210:3000"
+    volumes:
+      - sqlite-data:/data
+    depends_on:
+      - qdrant
+
+  qdrant:
+    image: qdrant/qdrant:v1.15.4
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+volumes:
+  qdrant-data:
+  sqlite-data:
