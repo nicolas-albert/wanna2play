@@ -38,8 +38,12 @@ Notes:
 ## Import your Steam library
 
 1) Configure your Steam credentials in `.env`:
-- `STEAM_API_KEY` (create one: https://steamcommunity.com/dev/apikey)
-- `STEAM_ID` (SteamID64 — you can find it on https://steamid.io/)
+- **Preferred (official, stable):**
+  - `STEAM_API_KEY` (create one: https://steamcommunity.com/dev/apikey)
+  - `STEAM_ID` (SteamID64 — you can find it on https://steamid.io/)
+- **Fallback (no Web API key):**
+  - `STEAM_PROFILE` (SteamID64, vanity ID, or full profile URL)
+  - requires Steam privacy: your **Game details** must be **Public**
 
 2) Run the importer (one-shot container):
 

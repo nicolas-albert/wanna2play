@@ -28,6 +28,7 @@ services:
       WANNA2PLAY_APP_URL: http://app:3000
       STEAM_API_KEY: ${STEAM_API_KEY:-}
       STEAM_ID: ${STEAM_ID:-}
+      STEAM_PROFILE: ${STEAM_PROFILE:-}
       IMPORT_CONCURRENCY: ${IMPORT_CONCURRENCY:-4}
     volumes:
       - ./:/work:ro
