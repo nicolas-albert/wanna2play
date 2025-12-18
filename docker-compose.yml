@@ -14,7 +14,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:
-      - "127.0.0.1:3210:3000"
+      - "3210:3000"
     volumes:
       - sqlite-data:/data
     depends_on:
